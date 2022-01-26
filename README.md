@@ -48,3 +48,24 @@ The resulting webpage consist of a single canvas, that have the mandelbrot image
 ### Concurrency improvement in Rust
 The code is only using a single thread. Since the escape iteration detection is point-wise, this is a perfect example of an application that can be trivially parallelized. I should investigate how to do this in Rust.
 
+
+# Installation Steps
+
+1)  First step to initialize the project: ```cargo init --lib mandelbrot```.
+2)  Create a directory ```mandelbrot/www```.
+
+Move in to the ```mandelbrot/www``` directory.
+
+3)  Initialize a node-project: ```npm init -y```.
+4)  Install webpack ```npm install --save webpack webpack-cli copy-webpack-plugin```.
+5)  Install development server: ```npm install --save-dev webpack-dev-server```.
+6)  Create a ```.gitignore``` in ```www``` to avoid storing ```node_modules```.
+7)  Create a sub-directory ```public```.
+8)  Create ```index.html```, ```index.js``` and ```bootstrap.js``` in ```www```.
+9)  Create and configure ```webpack.config.js```.
+10) Add ```"dev": "webpack-dev-server"``` to the node configuration (```package.json```).
+11) Add ```"mandelbrot": "file:../pkg",``` to ```package.json```.
+In order to use typescript (from ~/www):
+
+1) ```npm install --save typescript ts-loader```.
+2) Configure ```tsconfig.json```.
