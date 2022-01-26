@@ -10,11 +10,12 @@ canvas.width = 2048;
 init().then(wasm => {
 
     // Hard-Coded rectangle TODO Fix
-    const mandel = Mandelbrot.new(-2.0, -2.0, 2.0, 2.0, canvas.width, canvas.height, 500,255,0,0);
+    const mandel = Mandelbrot.new(-2.0, -2.0, 2.0, 2.0, canvas.width, canvas.height, 512, 128, 255, 0, 0);
     const data = new Uint8ClampedArray(wasm.memory.buffer, mandel.get_image(), canvas.width*canvas.height*4);
     const image = new ImageData(data, canvas.width, canvas.height)
-    mandel.zoom(0.0,0.0,1.0,1.0);
-    ctx.putImageData(image,0,0);
+
+    mandel.update_image(0.0, 0.0, 1.0, 1.0);
+    ctx.putImageData(image, 0, 0);
 
     type Point = {x: number, y: number};
     let firstCorner: Point;
@@ -35,15 +36,17 @@ init().then(wasm => {
             y: (e.clientY-canvas.offsetTop)/canvas.offsetHeight
         }
 
-        mandel.zoom(firstCorner.x, firstCorner.y, secondCorner.x-firstCorner.x, secondCorner.y-firstCorner.y);
-        ctx.putImageData(image,0,0);
+        mandel.update_image(firstCorner.x, firstCorner.y, secondCorner.x-firstCorner.x, secondCorner.y-firstCorner.y);
+        ctx.putImageData(image, 0, 0);
+
         firstCorner = undefined;
         secondCorner = undefined;
     });
     canvas.addEventListener('mouseout', e => {
         firstCorner = undefined;
         secondCorner = undefined;
-        ctx.putImageData(image,0,0);
+
+        ctx.putImageData(image, 0, 0);
     });
     canvas.addEventListener('mousemove', e => {
         if (firstCorner === undefined) {
@@ -53,7 +56,7 @@ init().then(wasm => {
             x: (e.clientX-canvas.offsetLeft)/canvas.offsetWidth,
             y: (e.clientY-canvas.offsetTop)/canvas.offsetHeight
         }
-        ctx.putImageData(image,0,0);
+        ctx.putImageData(image, 0, 0);
 
         ctx.lineWidth = 5;
         ctx.strokeStyle = 'cyan';
