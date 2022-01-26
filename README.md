@@ -34,10 +34,17 @@ R,G,B,A, R,G,B,A, ...
 On the Rust-side, I naively used a vector with u32, and used bit manipulations to get the bits for each color etc. This turned out to be a nightmare, due to little endian-problem. I switched to using a vec of u8, and then it worked.
 
 ## Things to improve
+
+### Webpack
 In order to have a reactive development environment, I use ```webpack```.
 One thing that drives me crazy is that the CSS-code is written directly in the HTML code. In order to use a separate CSS-file, we need to configure ```webpack``` to keep track of CSS-files. There are a few npm packages to install, and then it should work. Maybe not sufficiently important (here) to make the effort, but I still want to explore ```webpack``` a bit more.
 
+### Extend to other iterative procedures
 One could consider looking att different iterative schemes, like Julia-sets etc. The purpose of this project is mainly to get things working with Rust-wasm-typescript, with something that is computationally heavy.
 
+### Better (less minimalistic) User Interface
 The resulting webpage consist of a single canvas, that have the mandelbrot image, and where you can zoom in using the mouse. All parameters (colorscheme etc) are hardcoded in the typescript program. It should be easy to make some buttons, to make it a bit more user friendly.
+
+### Concurrency improvement in Rust
+The code is only using a single thread. Since the escape iteration detection is point-wise, this is a perfect example of an application that can be trivially parallelized. I should investigate how to do this in Rust.
 
