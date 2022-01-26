@@ -10,7 +10,7 @@ canvas.width = 2048;
 init().then(wasm => {
 
     // Hard-Coded rectangle TODO Fix
-    const mandel = Mandelbrot.new(-2.0, -2.0, 2.0, 2.0, canvas.width, canvas.height, 512, 128, 255, 0, 0);
+    const mandel = Mandelbrot.new(-2.0, -2.0, 2.0, 2.0, canvas.width, canvas.height, 512, 128, 255, 255, 255);
     const data = new Uint8ClampedArray(wasm.memory.buffer, mandel.get_image(), canvas.width*canvas.height*4);
     const image = new ImageData(data, canvas.width, canvas.height)
 

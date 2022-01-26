@@ -17,3 +17,6 @@ $|z_{n+1}|=|z_n^2+c|\ge |z_n|^2-|c| \ge 2|z_n|-|z_n| = |z_n|$.
 We have shown that such sequences are unbounded and do not belong complement of the Mandelbrot set.
 
 A corollary is that the Mandelbrot set is contained in the circle $|c| \le 2$.
+
+![Example Image](/img/Mandelbrot-Image.png)
+*Snapshot of an early zoom in the Mandelbrot image.*

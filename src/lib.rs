@@ -37,8 +37,11 @@ pub struct Mandelbrot {
     d: PointF64,
     max_iter: usize,
     n_colors: usize,
-    rgba0: usize,
-    img: Vec<usize>,
+    red: u8,
+    green: u8,
+    blue: u8,
+    img2: Vec<usize>,
+    img: Vec<u8>,
     colormap: Vec<usize>,
 }
 
@@ -52,8 +55,11 @@ impl Mandelbrot {
             d: PointF64{x: (x1-x0) / nx as f64, y: (y1-y0) / ny as f64},
             max_iter,
             n_colors,
-            rgba0: ((red as usize) << 24) + ((green as usize) << 16) + ((blue as usize) << 8),
-            img: Vec::with_capacity(nx*ny),
+            red,
+            green,
+            blue,
+            img2: Vec::with_capacity(nx*ny),
+            img: Vec::with_capacity(4*nx*ny),
             colormap: Vec::with_capacity(max_iter),
         };
         mandel
@@ -69,15 +75,15 @@ impl Mandelbrot {
         self.d.y = dxy*self.d.y;
     }
 
-    fn get_coord(&self, idx: &PointUsize) -> PointF64 {
+    fn get_coord(&self, i: &PointUsize) -> PointF64 {
         PointF64 {
-            x: self.z0.x+(idx.x as f64+0.5)*self.d.x,
-            y: self.z0.y+(idx.y as f64+0.5)*self.d.y,
+            x: self.z0.x+(i.x as f64+0.5)*self.d.x,
+            y: self.z0.y+(i.y as f64+0.5)*self.d.y,
         }
     }
 
-    fn count_iter_for_idx(&self, idx: &PointUsize) -> usize {
-        let c = self.get_coord(&idx);
+    fn count_iter_for_index(&self, i: &PointUsize) -> usize {
+        let c = self.get_coord(&i);
         let mut z = PointF64{x:0.0, y:0.0};
         for iter in 0..self.max_iter {
             // Check |z| >= 2 for divergence.
@@ -95,26 +101,32 @@ impl Mandelbrot {
 
     /// Count the #iterations.
     fn count_iterations(&mut self) {
-        self.img.clear();
-        let mut idx: PointUsize = PointUsize{x:0,y:0};
+        self.img2.clear();
+        let mut i: PointUsize = PointUsize{x:0,y:0};
         for iy in 0..self.n.y {
-            idx.y = iy;
+            i.y = iy;
             for ix in 0..self.n.x {
-                idx.x = ix;
-                self.img.push(self.count_iter_for_idx(&idx));
+                i.x = ix;
+                self.img2.push(self.count_iter_for_index(&i));
             }
         }
     }
 
     /// Change representation of image from #iterations to a rgba-color.
     fn iterations_to_color(&mut self) {
-        for idx in 0..self.n.x*self.n.y {
-            self.img[idx] = self.colormap[self.img[idx]];
+        self.img.clear();
+        self.img.resize(self.img.capacity(), 255);
+
+        for i in 0..self.n.x*self.n.y {
+            let i4 = i << 2;
+            self.img[i4] = (self.red as usize*self.colormap[self.img2[i]]/self.n_colors) as u8;
+            self.img[i4+1] = (self.green as usize*self.colormap[self.img2[i]]/self.n_colors) as u8;
+            self.img[i4+2] = (self.blue as usize*self.colormap[self.img2[i]]/self.n_colors) as u8;
         }
     }
 
     /// Return the pointer to the image.
-    pub fn get_image(&self) -> *const usize {
+    pub fn get_image(&self) -> *const u8 {
         self.img.as_ptr()
     }
 
@@ -125,7 +137,6 @@ impl Mandelbrot {
         self.iteration_frequency();
         self.frequency_cumsum();
         self.iteration_binner();
-        self.set_color_scheme();
         self.iterations_to_color();
     }
     
@@ -135,8 +146,8 @@ impl Mandelbrot {
         self.colormap.resize(self.colormap.capacity(),0);
 
         // Count the frequency of the different iterations.
-        for idx in 0..self.img.len() {
-            self.colormap[self.img[idx]] += 1;
+        for i in 0..self.img2.len() {
+            self.colormap[self.img2[i]] += 1;
         }
     }
 
@@ -145,33 +156,21 @@ impl Mandelbrot {
         self.colormap[0] = 0;
 
         // Cumulative sum of the iteration frequencies
-        for idx in 1..self.max_iter {
-            self.colormap[idx] += self.colormap[idx-1];
+        for i in 1..self.max_iter {
+            self.colormap[i] += self.colormap[i-1];
         }
     }
 
     /// Bin the different number of iterations according to their frequencies.
     fn iteration_binner(&mut self) {
-        let threshold = self.colormap[self.max_iter-1] / self.n_colors;
-        let mut bin = 1;
-        let mut cnt = 0;
-        for idx in 1..self.max_iter {
-            cnt += self.colormap[idx];
-            self.colormap[idx] = (256*bin)/self.n_colors;
-            if cnt > threshold {
+        let threshold = self.colormap[self.max_iter-1] / (self.n_colors-1);
+        let mut bin = 0;
+        for i in 1..self.max_iter {
+            if self.colormap[i] > threshold*bin {
                 bin += 1;
-                cnt %= threshold;
             }
+            self.colormap[i] = bin;
         }
-    }
-    /// Set the colors of the Mandelbrot image.
-    fn set_color_scheme(&mut self) {
-
-        // Add the color scheme.
-        for idx in 0..self.max_iter {
-            self.colormap[idx] += self.rgba0;
-        }
-
     }
 }
 
