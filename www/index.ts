@@ -13,13 +13,26 @@ const ctx = canvas.getContext("2d");
 canvas.height = 2048;
 canvas.width = 2048;
 
+const CORNER_X0 = -2.0;
+const CORNER_Y0 = -2.0;
+const CORNER_X1 = 2.0;
+const CORNER_Y1 = 2.0;
+const MAX_ITERATIONS = 512;
+const NUMBER_OF_COLORS = 128;
+const RGB_RED = 0;
+const RGB_GREEN = 0;
+const RGB_BLUE = 255;
+
 // Wait for WASM to be initialized.
 init().then(wasm => {
 
     // Create a new Mandelbrot object from Rust.
     // There are plenty of hardcoded values here. They should be given
     // by the user in the web-application.
-    const mandel = Mandelbrot.new(-2.0, -2.0, 2.0, 2.0, canvas.width, canvas.height, 512, 128, 255, 255, 255);
+    const mandel = Mandelbrot.new(CORNER_X0, CORNER_Y0, CORNER_X1, CORNER_Y1,
+                                  canvas.width, canvas.height,
+                                  MAX_ITERATIONS, NUMBER_OF_COLORS,
+                                  RGB_RED, RGB_GREEN, RGB_BLUE);
 
     // Get access to the image that is handled from Rust.
     const data = new Uint8ClampedArray(wasm.memory.buffer, mandel.get_image(), canvas.width*canvas.height*4);
