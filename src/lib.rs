@@ -71,7 +71,24 @@ pub struct Mandelbrot {
 #[wasm_bindgen]
 impl Mandelbrot {
     /// Constructor initializes the parameters to the most scaled out image position.
-    pub fn new(x0: f64, y0: f64, x1: f64, y1: f64, nx: usize, ny: usize, max_iter: usize, n_colors: usize, red: u8, green: u8, blue: u8) -> Mandelbrot {
+    /// 
+    /// * `x0`: x-coordinate of upper left corner of the image.
+    /// * `y0`: y-coordinate of upper left corner of the image.
+    /// * `x1`: x-coordinate of lower right corner of the image.
+    /// * `y1`: y-coordinate of lower right corner of the image.
+    /// * `nx`: Number of pixels in the x-direction.
+    /// * `ny`: Number of pixels in the y-direction.
+    /// * `max_iter`: Maximum number of iterations before concluded that point is in Mandelbrot Set.
+    /// * `n_colors`: Number of colors in the rendered image.
+    /// * `red`: Red RGB-value.
+    /// * `green`: Green RGB-value.
+    /// * `blue`: Blue RGB-value.
+    pub fn new(
+        x0: f64, y0: f64, x1: f64, y1: f64,
+        nx: usize, ny: usize, max_iter: usize, n_colors: usize,
+        red: u8, green: u8, blue: u8
+    ) -> Mandelbrot {
+
         let mandel = Mandelbrot {
             z0: PointF64{x: x0, y: y0},
             n: PointUsize{x: nx, y: ny},
@@ -89,11 +106,21 @@ impl Mandelbrot {
     }
 
     /// Return the pointer to the image.
+    /// This is used by typescript to get access to the memory
+    /// for the image.
     pub fn get_image(&self) -> *const u8 {
         self.img.as_ptr()
     }
 
     /// Update image and compute a new image.
+    /// 
+    /// The input arguments are in "relative" coordinates in range [0,1],
+    /// to avoid cancellation issues. I don't think it matters, but still...
+    /// 
+    /// * `x0`: Relative x-coordinate to the first corner in a rectangle.
+    /// * `y0`: Relative y-coordinate to the first corner in a rectangle.
+    /// * `dx`: Relative x-width of rectangle.
+    /// * `dy`: Relative y-width of rectangle.
     pub fn update_image(&mut self, x0: f64, y0: f64, dx: f64, dy: f64) {
         self.rescale_problem(x0, y0, dx, dy);
         self.count_iterations();
