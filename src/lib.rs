@@ -1,6 +1,6 @@
-//! mandelbrot is the engine of a Mandelbrot Image Generator for the browser.
-//! It is used with typescript to setup a minimal web-application, where it is
-//! possible to zoom in the image, which is automatically regenerated.
+/// mandelbrot is the engine of a Mandelbrot Image Generator for the browser.
+/// It is used with typescript to setup a minimal web-application, where it is
+/// possible to zoom in the image, which is automatically regenerated.
 
 /// Activate wasm_bindgen to be able to compile to wasm.
 use wasm_bindgen::prelude::*;
@@ -119,26 +119,56 @@ impl Mandelbrot {
     /// 
     /// * `x0`: Relative x-coordinate to the first corner in a rectangle.
     /// * `y0`: Relative y-coordinate to the first corner in a rectangle.
-    /// * `dx`: Relative x-width of rectangle.
-    /// * `dy`: Relative y-width of rectangle.
-    pub fn update_image(&mut self, x0: f64, y0: f64, dx: f64, dy: f64) {
-        self.rescale_problem(x0, y0, dx, dy);
+    /// * `x1`: Relative x-coordinate to the opposite corner in a rectangle.
+    /// * `y1`: Relative y-coordinate to the opposite corner in a rectangle.
+    pub fn update_image(&mut self, x0: f64, y0: f64, x1: f64, y1: f64) {
+
+        // Setup the coordinates for the new image, using relative coordinates.
+        self.rescale_problem(x0, y0, x1, y1);
+
+        // Count the escape iterations.
         self.count_iterations();
+
+        // Compute statistics for the different escape iterations.
         self.iteration_frequency();
+
+        // Take cumulative sum of the frequencies of the escape iterations.
         self.frequency_cumsum();
+
+        // Bin s.t. the cumulative sum becomes linear.
+        // This defines the colormap for each escape iteration.
         self.iteration_binner();
+
+        // Fill the image with the correct RGBA-color.
         self.iterations_to_color();
     }
 
     /// Rescale the box that constitutes the Mandelbrot image.
-    fn rescale_problem(&mut self, rx0: f64, ry0: f64, dx: f64, dy: f64) {
+    fn rescale_problem(&mut self, x0: f64, y0: f64, x1: f64, y1: f64) {
 
-        let dxy = if dx.abs() > dy.abs() {dx} else {dy};
+        let mut rx0 = x0;
+        let mut rx1 = x1;
+        let mut ry0 = y0;
+        let mut ry1 = y1;
+
+        // Swap x if wrong orientation
+        if rx0 > rx1 {
+            rx0 = x1;
+            rx1 = x0;
+        }
+        
+        // Swap y if wrong orientation
+        if ry0 > ry1 {
+            ry0 = y1;
+            ry1 = y0;
+        }
+
+        let dxy = if rx1-rx0 > ry1-ry0 {rx1-rx0} else {ry1-ry0};
 
         self.z0.x += rx0*self.d.x*self.n.x as f64;
         self.z0.y += ry0*self.d.y*self.n.y as f64;
         self.d.x = dxy*self.d.x;
-        self.d.y = dxy*self.d.y;
+        self.d.y = self.d.x;
     }
 
     /// Get the coordinate for a multiple-index in the image.
@@ -156,7 +186,7 @@ impl Mandelbrot {
         let mut z = PointF64{x:0.0, y:0.0};
         for iter in 0..self.max_iter {
             // Check |z| >= 2 for divergence.
-            if z.x*z.x + z.y*z.y >= 2.0 {
+            if z.x*z.x + z.y*z.y >= 4.0 {
                 return iter
             }
             // Update z <- z*z + c

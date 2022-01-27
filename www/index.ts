@@ -79,7 +79,7 @@ init().then(wasm => {
         }
 
         // Update the image in Rust.
-        mandel.update_image(firstCorner.x, firstCorner.y, secondCorner.x-firstCorner.x, secondCorner.y-firstCorner.y);
+        mandel.update_image(firstCorner.x, firstCorner.y, secondCorner.x, secondCorner.y);
 
         // Render the updated image.
         ctx.putImageData(image, 0, 0);
