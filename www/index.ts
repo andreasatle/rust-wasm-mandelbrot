@@ -14,13 +14,13 @@ canvas.height = 2048;
 canvas.width = 2048;
 
 const CORNER_X0 = -2.0;
-const CORNER_Y0 = -2.0;
-const CORNER_X1 = 2.0;
-const CORNER_Y1 = 2.0;
+const CORNER_Y0 = -1.3;
+const CORNER_X1 = 0.6;
+const CORNER_Y1 = 1.3;
 const MAX_ITERATIONS = 512;
 const NUMBER_OF_COLORS = 128;
-const RGB_RED = 0;
-const RGB_GREEN = 0;
+const RGB_RED = 255;
+const RGB_GREEN = 255;
 const RGB_BLUE = 255;
 
 // Wait for WASM to be initialized.
