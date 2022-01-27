@@ -10,8 +10,15 @@ use wasm_bindgen::prelude::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+/// Import utility-functions from typescript.
 #[wasm_bindgen(module = "/www/utils/utils.ts")]
 extern "C" {
+    /// Write a message to the console in the web-browser.
+    /// 
+    /// It's convenient to use the ```format!``` macro
+    /// to build a String.
+    /// 
+    /// * ```msg```: Message to be written.
     fn output_js(msg: String);
 }
 
