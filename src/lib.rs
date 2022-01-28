@@ -72,7 +72,7 @@ pub struct Mandelbrot {
     img: Vec<u8>,
 
     /// Mapping from escape-iteration to interpolation-weight for the color.
-    colormap: Vec<usize>,
+    iterations: Vec<usize>,
 }
 
 #[wasm_bindgen]
@@ -107,7 +107,7 @@ impl Mandelbrot {
             blue,
             work: Vec::with_capacity(nx*ny),
             img: Vec::with_capacity(4*nx*ny),
-            colormap: Vec::with_capacity(max_iter),
+            iterations: Vec::with_capacity(max_iter),
         };
         mandel
     }
@@ -143,7 +143,7 @@ impl Mandelbrot {
         self.frequency_cumsum();
 
         // Bin s.t. the cumulative sum becomes linear.
-        // This defines the colormap for each escape iteration.
+        // This defines the iterations for each escape iteration.
         self.iteration_binner();
 
         // Fill the image with the correct RGBA-color.
@@ -221,48 +221,48 @@ impl Mandelbrot {
     /// Change representation of image from #iterations to a rgba-color.
     fn iterations_to_color(&mut self) {
         self.img.clear();
-        self.img.resize(self.img.capacity(), 255);
+        self.img.resize(4*self.n.x*self.n.y, 255);
 
         for i in 0..self.n.x*self.n.y {
             let i4 = i << 2;
-            self.img[i4] = (self.red as usize*self.colormap[self.work[i]]/self.n_colors) as u8;
-            self.img[i4+1] = (self.green as usize*self.colormap[self.work[i]]/self.n_colors) as u8;
-            self.img[i4+2] = (self.blue as usize*self.colormap[self.work[i]]/self.n_colors) as u8;
+            self.img[i4] = ((self.red as usize*self.iterations[self.work[i]])/self.n_colors) as u8;
+            self.img[i4+1] = ((self.green as usize*self.iterations[self.work[i]])/self.n_colors) as u8;
+            self.img[i4+2] = ((self.blue as usize*self.iterations[self.work[i]])/self.n_colors) as u8;
         }
     }
     
     /// Count the frequency (or occurance) of each escape iteration.
     fn iteration_frequency(&mut self) {
         // Initialize the array to zero.
-        self.colormap.clear();
-        self.colormap.resize(self.colormap.capacity(),0);
+        self.iterations.clear();
+        self.iterations.resize(self.n.x*self.n.y, 0);
 
         // Count the frequency of the different iterations.
         for i in 0..self.work.len() {
-            self.colormap[self.work[i]] += 1;
+            self.iterations[self.work[i]] += 1;
         }
     }
 
     /// Take the cumulative sum, except for the first entry.
     fn frequency_cumsum(&mut self) {
         // Skip the count of the actual Mandelbrot Set.
-        self.colormap[0] = 0;
+        self.iterations[0] = 0;
 
         // Cumulative sum of the iteration frequencies
         for i in 1..self.max_iter {
-            self.colormap[i] += self.colormap[i-1];
+            self.iterations[i] += self.iterations[i-1];
         }
     }
 
     /// Bin the different number of iterations according to their frequencies.
     fn iteration_binner(&mut self) {
-        let threshold = self.colormap[self.max_iter-1] / (self.n_colors-1);
+        let threshold = self.iterations[self.max_iter-1] / (self.n_colors-1);
         let mut bin = 0;
         for i in 1..self.max_iter {
-            if self.colormap[i] > threshold*bin {
+            if self.iterations[i] > threshold*bin {
                 bin += 1;
             }
-            self.colormap[i] = bin;
+            self.iterations[i] = bin;
         }
     }
 }

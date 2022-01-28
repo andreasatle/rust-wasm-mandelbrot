@@ -10,8 +10,8 @@ const canvas = document.getElementById("mandelbrot-canvas") as HTMLCanvasElement
 const ctx = canvas.getContext("2d");
 
 // Set the size of the canvas and the final image.
-canvas.height = 2048;
-canvas.width = 2048;
+canvas.height = 1024;
+canvas.width = 1024;
 
 const CORNER_X0 = -2.0;
 const CORNER_Y0 = -1.3;
