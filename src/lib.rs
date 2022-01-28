@@ -25,6 +25,7 @@ extern "C" {
 /// A Point for f64.
 /// Remark: Generics doesn't seem to work with WASM.
 #[wasm_bindgen]
+#[derive(Clone,Copy)]
 struct PointF64 {
     x: f64,
     y: f64,
@@ -33,14 +34,13 @@ struct PointF64 {
 /// A Point for usize.
 /// Remark: Generics doesn't seem to work with WASM.
 #[wasm_bindgen]
+#[derive(Clone,Copy)]
 struct PointUsize {
     x: usize,
     y: usize,
 }
 
-/// Contains all necessary info about the Mandelbrot image.
-#[wasm_bindgen]
-pub struct Mandelbrot {
+struct MetaData {
     /// Corner Point of image.
     z0: PointF64,
 
@@ -64,6 +64,58 @@ pub struct Mandelbrot {
 
     /// Blue RGB-value.
     blue: u8,
+
+}
+
+impl MetaData {
+    /// Rescale the box that constitutes the Mandelbrot image.
+    fn rescale_problem(&mut self, x0: f64, y0: f64, x1: f64, y1: f64) {
+        // Make sure that x1 > x0, and y1 > y0.
+        let (x0,x1) = if x1 > x0 {(x0,x1)} else {(x1,x0)};
+        let (y0,y1) = if y1 > y0 {(y0,y1)} else {(y1,y0)};
+
+        // Let dxy be the largest side in the rectangle.
+        let dxy = if x1-x0 > y1-y0 {x1-x0} else {y1-y0};
+
+        self.z0.x += x0*self.d.x*self.n.x as f64;
+        self.z0.y += y0*self.d.y*self.n.y as f64;
+        self.d.x = dxy*self.d.x;
+        self.d.y = self.d.x;
+    }
+
+    /// Compute the escape iteration for one point c.
+    /// 0 is returned when the maximum number of iterations are reached.
+    fn count_iter_for_index(&self, i: usize) -> usize {
+        let c = self.get_coord(i);
+        let mut z = PointF64{x:0.0, y:0.0};
+        for iter in 0..self.max_iter {
+            // Check |z|^2 >= 4 for escape-iteration.
+            if z.x*z.x + z.y*z.y >= 4.0 {
+                return iter
+            }
+            // Update z <- z*z + c
+            let zx = z.x*z.x - z.y*z.y + c.x;
+            z.y = 2.0*z.x*z.y + c.y;
+            z.x = zx;
+        }
+        // Return 0 when max-iter reached.
+        0
+    }
+    /// Get the coordinate for a multiple-index in the image.
+    fn get_coord(&self, i: usize) -> PointF64 {
+        PointF64 {
+            x: self.z0.x + ((i%self.n.x) as f64 + 0.5) * self.d.x,
+            y: self.z0.y + ((i/self.n.x) as f64 + 0.5) * self.d.y,
+        }
+    }
+
+}
+
+/// Contains all necessary info about the Mandelbrot image.
+#[wasm_bindgen]
+pub struct Mandelbrot {
+
+    meta: MetaData,
 
     /// Work vector of full image size.
     work: Vec<usize>,
@@ -96,20 +148,21 @@ impl Mandelbrot {
         red: u8, green: u8, blue: u8
     ) -> Mandelbrot {
 
-        let mandel = Mandelbrot {
-            z0: PointF64{x: x0, y: y0},
-            n: PointUsize{x: nx, y: ny},
-            d: PointF64{x: (x1-x0) / nx as f64, y: (y1-y0) / ny as f64},
-            max_iter,
-            n_colors,
-            red,
-            green,
-            blue,
-            work: Vec::with_capacity(nx*ny),
-            img: Vec::with_capacity(4*nx*ny),
-            iterations: Vec::with_capacity(max_iter),
-        };
-        mandel
+        Mandelbrot {
+            meta: MetaData {
+                z0: PointF64{x: x0, y: y0},
+                n: PointUsize{x: nx, y: ny},
+                d: PointF64{x: (x1-x0) / nx as f64, y: (y1-y0) / ny as f64},
+                max_iter,
+                n_colors,
+                red,
+                green,
+                blue,
+            },
+            work: vec![0;nx*ny],
+            img: vec![0;4*nx*ny],
+            iterations: vec![0;max_iter],
+        }
     }
 
     /// Return the pointer to the image.
@@ -131,7 +184,7 @@ impl Mandelbrot {
     pub fn update_image(&mut self, x0: f64, y0: f64, x1: f64, y1: f64) {
 
         // Setup the coordinates for the new image, using relative coordinates.
-        self.rescale_problem(x0, y0, x1, y1);
+        self.meta.rescale_problem(x0, y0, x1, y1);
 
         // Count the escape iterations.
         self.count_iterations();
@@ -149,96 +202,37 @@ impl Mandelbrot {
         // Fill the image with the correct RGBA-color.
         self.iterations_to_color();
     }
-
-    /// Rescale the box that constitutes the Mandelbrot image.
-    fn rescale_problem(&mut self, x0: f64, y0: f64, x1: f64, y1: f64) {
-
-        let mut rx0 = x0;
-        let mut rx1 = x1;
-        let mut ry0 = y0;
-        let mut ry1 = y1;
-
-        // Swap x if wrong orientation
-        if rx0 > rx1 {
-            rx0 = x1;
-            rx1 = x0;
-        }
-        
-        // Swap y if wrong orientation
-        if ry0 > ry1 {
-            ry0 = y1;
-            ry1 = y0;
-        }
-
-        let dxy = if rx1-rx0 > ry1-ry0 {rx1-rx0} else {ry1-ry0};
-
-        self.z0.x += rx0*self.d.x*self.n.x as f64;
-        self.z0.y += ry0*self.d.y*self.n.y as f64;
-        self.d.x = dxy*self.d.x;
-        self.d.y = self.d.x;
-    }
-
-    /// Get the coordinate for a multiple-index in the image.
-    fn get_coord(&self, i: &PointUsize) -> PointF64 {
-        PointF64 {
-            x: self.z0.x+(i.x as f64+0.5)*self.d.x,
-            y: self.z0.y+(i.y as f64+0.5)*self.d.y,
-        }
-    }
-
-    /// Compute the escape iteration for one index.
-    /// 0 is returned when the maximum number of iterations are reached.
-    fn count_iter_for_index(&self, i: &PointUsize) -> usize {
-        let c = self.get_coord(&i);
-        let mut z = PointF64{x:0.0, y:0.0};
-        for iter in 0..self.max_iter {
-            // Check |z| >= 2 for divergence.
-            if z.x*z.x + z.y*z.y >= 4.0 {
-                return iter
-            }
-            // Update z <- z*z + c
-            let zx = z.x*z.x - z.y*z.y + c.x;
-            z.y = 2.0*z.x*z.y + c.y;
-            z.x = zx;
-        }
-        // Return 0 when max-iter reached.
-        0
-    }
-
+    
     /// Count the escape iterations for all indices in the image.
     fn count_iterations(&mut self) {
-        self.work.clear();
-        let mut i: PointUsize = PointUsize{x:0,y:0};
-        for iy in 0..self.n.y {
-            i.y = iy;
-            for ix in 0..self.n.x {
-                i.x = ix;
-                self.work.push(self.count_iter_for_index(&i));
-            }
+        // I want the iteration in this form, so I can use rayon.
+        for (i,v) in self.work.iter_mut().enumerate() {
+            *v = self.meta.count_iter_for_index(i);
         }
     }
 
     /// Change representation of image from #iterations to a rgba-color.
     fn iterations_to_color(&mut self) {
-        self.img.clear();
-        self.img.resize(4*self.n.x*self.n.y, 255);
 
-        for i in 0..self.n.x*self.n.y {
+        for (i,w) in self.work.iter().enumerate() {
             let i4 = i << 2;
-            self.img[i4] = ((self.red as usize*self.iterations[self.work[i]])/self.n_colors) as u8;
-            self.img[i4+1] = ((self.green as usize*self.iterations[self.work[i]])/self.n_colors) as u8;
-            self.img[i4+2] = ((self.blue as usize*self.iterations[self.work[i]])/self.n_colors) as u8;
+            self.img[i4] = ((self.meta.red as usize*self.iterations[*w])/self.meta.n_colors) as u8;
+            self.img[i4+1] = ((self.meta.green as usize*self.iterations[*w])/self.meta.n_colors) as u8;
+            self.img[i4+2] = ((self.meta.blue as usize*self.iterations[*w])/self.meta.n_colors) as u8;
+            self.img[i4+3] = 255;
         }
     }
     
     /// Count the frequency (or occurance) of each escape iteration.
     fn iteration_frequency(&mut self) {
-        // Initialize the array to zero.
-        self.iterations.clear();
-        self.iterations.resize(self.n.x*self.n.y, 0);
 
+        // Reset the counters.
+        for v in self.iterations.iter_mut() {
+            *v = 0;
+        }
+        
         // Count the frequency of the different iterations.
-        for i in 0..self.work.len() {
+        for (i,_) in self.work.iter().enumerate() {
             self.iterations[self.work[i]] += 1;
         }
     }
@@ -249,16 +243,17 @@ impl Mandelbrot {
         self.iterations[0] = 0;
 
         // Cumulative sum of the iteration frequencies
-        for i in 1..self.max_iter {
+        for i in 1..self.meta.max_iter {
             self.iterations[i] += self.iterations[i-1];
         }
     }
 
     /// Bin the different number of iterations according to their frequencies.
     fn iteration_binner(&mut self) {
-        let threshold = self.iterations[self.max_iter-1] / (self.n_colors-1);
+        let threshold = self.iterations[self.meta.max_iter-1] / (self.meta.n_colors-1);
         let mut bin = 0;
-        for i in 1..self.max_iter {
+        // This is a sequential process.
+        for i in 1..self.meta.max_iter {
             if self.iterations[i] > threshold*bin {
                 bin += 1;
             }
