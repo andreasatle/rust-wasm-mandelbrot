@@ -206,35 +206,31 @@ impl Mandelbrot {
     /// Count the escape iterations for all indices in the image.
     fn count_iterations(&mut self) {
         // I want the iteration in this form, so I can use rayon.
-        for (i,v) in self.work.iter_mut().enumerate() {
+        self.work.iter_mut().enumerate().for_each(|(i,v)|{
             *v = self.meta.count_iter_for_index(i);
-        }
+        });
     }
 
     /// Change representation of image from #iterations to a rgba-color.
     fn iterations_to_color(&mut self) {
 
-        for (i,w) in self.work.iter().enumerate() {
+        self.work.iter().enumerate().for_each(|(i,w)|{
             let i4 = i << 2;
             self.img[i4] = ((self.meta.red as usize*self.iterations[*w])/self.meta.n_colors) as u8;
             self.img[i4+1] = ((self.meta.green as usize*self.iterations[*w])/self.meta.n_colors) as u8;
             self.img[i4+2] = ((self.meta.blue as usize*self.iterations[*w])/self.meta.n_colors) as u8;
             self.img[i4+3] = 255;
-        }
+        });
     }
     
     /// Count the frequency (or occurance) of each escape iteration.
     fn iteration_frequency(&mut self) {
 
         // Reset the counters.
-        for v in self.iterations.iter_mut() {
-            *v = 0;
-        }
+        self.iterations.iter_mut().for_each(|v|{*v = 0;});
         
         // Count the frequency of the different iterations.
-        for (i,_) in self.work.iter().enumerate() {
-            self.iterations[self.work[i]] += 1;
-        }
+        self.work.iter().for_each(|w|{self.iterations[*w] += 1;});
     }
 
     /// Take the cumulative sum, except for the first entry.
